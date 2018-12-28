@@ -1,0 +1,12 @@
+SELECT instrs.ID, instrs.CFIName, instrs.Exchange
+FROM instrs
+WHERE (((instrs.[CFIName])="Облигации / Сектор / Корпоративные"));
+
+SELECT bond_discription.[ISIN, RegCode, NRDCode], bond_discription.FinToolType, bond_discription.Status, bond_discription.Sec_State_ID, bond_discription.SecStateRus_NRD, bond_discription.SecStateEng_NRD, bond_discription.HaveDefault, bond_discription.IsLombardCBR_NRD, bond_discription.IsQualified_NRD, bond_discription.ForMarketBonds_NRD, bond_discription.MicexList_NRD, bond_discription.Basis, bond_discription.Basis_NRD, bond_discription.Base_Month, bond_discription.Base_Year, bond_discription.Coupon_Period_Base_ID, bond_discription.IsGuaranteed, bond_discription.AccruedintCalcType, bond_discription.GuaranteeType, bond_discription.GuaranteeAmount, bond_discription.GuarantVal, bond_discription.Securitization, bond_discription.CouponPerYear, bond_discription.Cp_Type_ID, bond_discription.NumCoupons, bond_discription.NumCoupons_M, bond_discription.NumCoupons_NRD, bond_discription.Country, bond_discription.FaceFTName, bond_discription.FaceFTName_M, bond_discription.FaceFTName_NRD, bond_discription.FaceValue, bond_discription.FaceValue_M, bond_discription.FaceValue_NRD, bond_discription.CurrentFaceValue_NRD, *
+FROM bond_discription;
+
+SELECT Count(ASK)
+FROM base1;
+
+SELECT base1.ID, base1.Time, base1.BOARDNAME, base1.ASK, base1.BID
+FROM base1;
