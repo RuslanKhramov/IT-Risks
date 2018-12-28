@@ -1,0 +1,173 @@
+import pandas as pd
+import pyodbc 
+server = 'DESKTOP-1N69II6\MS Access' 
+database = 'Ruslan_BD' 
+username = 'user0' 
+password = 'ruskhram' 
+cnxn = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER='+server+';DATABASE='+database+';UID='+username+';PWD='+ password)
+
+SQLQuery1 = (""" 
+SELECT [IssuerName] FROM [HW].[dbo].[bond_information] GROUP BY [IssuerName]
+""")
+
+df = pd.read_sql(SQLQuery1, cnxn)
+
+print(df)
+	IssuerName
+0	4finance S.A
+1	Ak Bars Luxembourg
+2	Alfa Bond Issuance
+3	Alfa Holding Issuance
+4	Alrosa Finance, Luxemb.
+5	BKM Finance
+6	Borets Finance
+7	BrokerCreditService SP
+8	Brunswick Rail Finance
+9	Caterpillar InternFinance
+10	CBOM Finance
+11	DME Airport
+12	EBRD Bank
+13	EDC Finance
+14	Far East Capital
+15	Gaz Capital
+16	GPB Eurobond Finance
+17	GPB Finance
+18	IFC
+19	Kuznetski Capital
+20	LUKOIL Int Finance
+21	MMC Finance
+22	NKNK Finance
+23	OFCB Capital
+24	OIM ABS
+25	Or-ICB
+26	Polyus Gold Internation
+27	Raspadskaya SL
+28	RenaissanceSecuritiesTrad
+29	RG Brands
+...	...
+937	Элемент Лизинг
+938	Элемтэ ИК
+939	ЭМАльянс-Финанс
+940	Энел Россия
+941	Энергоинвест-2000
+942	Энергосберресурсы
+943	Энергоспецснаб
+944	ЭнергоСтрой-Финанс
+945	Энергоцентр
+946	ЭПЛ Даймонд НПК
+947	ЭФКО
+948	ЭФЭСк ГК
+949	Югинвестрегион
+950	Югтранзитсервис
+951	ЮгФинСервис
+952	Юлк Финанс
+953	Юниаструм Банк
+954	ЮниКредит Банк
+955	ЮНИМИЛК Финанс
+956	ЮниТайл
+957	ЮСКК
+958	ЮТК
+959	ЮТэйр-Финанс
+960	ЮУ КЖСИ
+961	ЮФК
+962	Якутскэнерго
+963	Ямало-Ненецкий АО Адм
+964	Ярославль Мэрия
+965	Ярославская Обл Прав
+966	ЯТЭК
+967 rows × 1 columns
+cnxn.close()
+
+OurIssuer = input()  #ввести имя эмитента и нажать ENTER
+OurDate = input('Enter a date in YYYY-MM-DD format: ')
+OurDate=pd.to_datetime(OurDate)
+
+import pandas as pd
+import pyodbc
+server = 'DESKTOP-1N69II6\MS Access' 
+database = 'Ruslan_BD' 
+username = 'user0' 
+password = 'ruskhram' 
+cnxn = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER='+server+';DATABASE='+database+';UID='+username+';PWD='+ password)
+
+SQLQuery2 = (""" 
+SELECT * FROM [HW].[dbo].[bond_information] 
+""")
+
+bonds = pd.read_sql(SQLQuery2, cnxn)
+cnxn.close()
+
+print(bonds)
+	ISIN, RegCode, NRDCode	IssuerName	SumMarketVal	EndMtyDate	BegDistDate	SecurityType	CouponType	HaveOffer	CouponPerYear	Basis	FaceFTName	AmortisedMty	FaceValue	coupon
+0	CH0141533403	VTB Capital SA	3.000000e+08	2015-11-17	2011-10-23	ЕвроКорп	Постоянный	0.0	1.0	30/360 German	CHF	0.0	5000.0	NaN
+1	CH0205819433	RZD Capital	5.250000e+08	2018-02-26	2013-01-31	ЕвроКорп	Постоянный	0.0	1.0	30/360 German	CHF	0.0	5000.0	NaN
+2	CH0205819441	RZD Capital	1.500000e+08	2021-02-26	2013-01-31	ЕвроКорп	Постоянный	0.0	1.0	30/360 German	CHF	0.0	5000.0	NaN
+3	KZ2C00001469	RG Brands	2.000000e+09	2014-10-19	2007-10-21	Корп	Постоянный	0.0	2.0	30E/360	KZT	0.0	1.0	NaN
+4	RU0001707572	Минфин РФ	4.211740e+10	2012-11-02	2002-10-11	Гос	Постоянный	1.0	1.0	act/365	RUB	0.0	1000.0	NaN
+5	RU0001737595	МИА КБ	2.200000e+08	2012-09-20	2002-11-14	Корп	Индексируемый	1.0	4.0	act/365	RUB	1.0	1000.0	15.392535
+6	RU0001987620	Промсвязьбанк	4.000000e+08	2004-11-14	2002-11-17	Корп	Переменный	1.0	2.0	act/365	RUB	0.0	1000.0	NaN
+7	RU0002260183	Газпром	0.000000e+00	2005-11-03	2002-11-21	Корп	Постоянный	1.0	2.0	act/365	RUB	0.0	1000.0	NaN
+8	RU0002867623	Минфин РФ	0.000000e+00	2019-08-14	2003-02-16	Гос	Постоянный	1.0	0.0	act/365	RUB	1.0	1000.0	NaN
+9	RU0002867631	Минфин РФ	2.747745e+10	2019-01-09	2003-02-16	Гос	Дисконт	1.0	NaN	act/365	RUB	1.0	1000.0	NaN
+10	RU0002867649	Минфин РФ	0.000000e+00	2020-03-18	2003-02-16	Гос	Постоянный	1.0	NaN	act/365	RUB	1.0	1000.0	NaN
+11	RU0002867656	Минфин РФ	0.000000e+00	2015-08-31	2003-02-16	Гос	Дисконт	1.0	NaN	act/365	RUB	1.0	1000.0	NaN
+12	RU0002867813	Минфин РФ	0.000000e+00	2015-08-31	2003-02-16	Гос	Дисконт	1.0	NaN	act/365	RUB	1.0	1000.0	NaN
+13	RU0002867821	Минфин РФ	0.000000e+00	2015-08-31	2003-02-16	Гос	Дисконт	1.0	NaN	act/365	RUB	1.0	1000.0	NaN
+14	RU0002867839	Минфин РФ	0.000000e+00	2015-08-31	2003-02-16	Гос	Постоянный	1.0	1.0	act/365	RUB	1.0	1000.0	NaN
+15	RU0002867854	Минфин РФ	1.929700e+07	2025-08-20	2003-02-16	Гос	Фиксированный	1.0	1.0	act/365	RUB	1.0	1000.0	NaN
+16	RU0002868001	Минфин РФ	1.118900e+07	2029-09-05	2003-02-16	Гос	Постоянный	1.0	1.0	act/365	RUB	1.0	1000.0	NaN
+17	RU0002868076	Минфин РФ	2.914495e+10	2018-08-29	2003-03-07	Гос	Фиксированный	0.0	2.0	act/365	RUB	1.0	1000.0	NaN
+18	RU0003935627	Москва Правительство	4.000000e+09	2005-03-11	2002-12-13	Муни	Постоянный	0.0	4.0	act/365	RUB	0.0	1000.0	NaN
+19	RU0003936146	Москва Правительство	0.000000e+00	2006-12-20	2002-12-22	Муни	Постоянный	1.0	4.0	act/365	RUB	0.0	1000.0	NaN
+20	RU0003936393	Москва Правительство	0.000000e+00	2005-12-25	2002-12-27	Муни	Постоянный	1.0	4.0	act/365	RUB	0.0	1000.0	NaN
+21	RU0003938688	Коми Адм	0.000000e+00	2007-12-24	2002-12-26	Муни	Фиксированный	0.0	4.0	act/365	RUB	0.0	1000.0	NaN
+22	RU0003939777	Правительство ХМАО-Югры	1.858460e+08	2005-12-08	2002-12-26	Муни	Фиксированный	1.0	2.0	act/365	RUB	0.0	1000.0	NaN
+23	RU0007202099	ЕВРАЗ НТМК	0.000000e+00	2002-07-03	2001-07-06	Корп	Переменный	1.0	3.0	act/365	RUB	0.0	1000.0	NaN
+24	RU0007489621	ВсероссБРР	0.000000e+00	2009-10-11	2001-10-14	Корп	Фиксированный	1.0	4.0	act/365	RUB	0.0	1000.0	NaN
+25	RU0007757621	Банк ВТБ	0.000000e+00	2006-02-22	2003-02-28	Корп	Фиксированный	0.0	1.0	act/365	RUB	0.0	1000.0	NaN
+26	RU0007773073	ОМЗ	0.000000e+00	2009-02-26	2003-03-08	Корп	Переменный	1.0	2.0	act/365	RUB	0.0	1000.0	NaN
+27	RU0008000443	Трубная МетКомп	0.000000e+00	2006-10-20	2003-10-23	Корп	Переменный	1.0	2.0	act/365	RUB	0.0	1000.0	NaN
+28	RU0008168208	Амтел-Фредештайн	0.000000e+00	2005-11-01	2003-11-22	Корп	Переменный	1.0	2.0	act/365	RUB	0.0	1000.0	NaN
+29	RU0008181748	Москва Правительство	0.000000e+00	2006-09-23	2003-12-25	Муни	Постоянный	1.0	4.0	act/365	RUB	0.0	1000.0	NaN
+...	...	...	...	...	...	...	...	...	...	...	...	...	...	...
+2905	XS0800817073	VEB Finance	1.000000e+09	2022-07-05	2012-06-28	ЕвроКорп	Постоянный	0.0	2.0	30E/360	USD	0.0	1000.0	NaN
+2906	XS0802648955	Russian Standard Finance	3.994350e+08	2017-07-11	2012-07-07	ЕвроКорп	Постоянный	1.0	2.0	30E/360	USD	0.0	1000.0	NaN
+2907	XS0808632847	Steel Funding	7.075850e+08	2018-02-19	2013-02-13	ЕвроКорп	Постоянный	1.0	2.0	30E/360	USD	0.0	1000.0	NaN
+2908	XS0832412505	Alfa Bond Issuance	7.500000e+08	2019-09-26	2012-09-21	ЕвроКорп	Постоянный	0.0	2.0	30E/360	USD	0.0	1000.0	NaN
+2909	XS0850393264	Brunswick Rail Finance	6.000000e+08	2017-11-01	2012-10-27	ЕвроКорп	Постоянный	0.0	2.0	30E/360	USD	0.0	1000.0	NaN
+2910	XS0855334289	Ak Bars Luxembourg	5.000000e+08	2015-11-19	2012-11-11	ЕвроКорп	Постоянный	0.0	2.0	30E/360	USD	0.0	1000.0	NaN
+2911	XS0868348987	Caterpillar InternFinance	5.000000e+09	2015-12-20	2012-12-22	ЕвроКорп	Постоянный	0.0	2.0	30E/360	RUB	0.0	100000.0	NaN
+2912	XS0882173734	OIM ABS	1.000000e+08	2020-01-28	2013-01-30	ЕвроКорп	Постоянный	0.0	2.0	30E/360	USD	0.0	1000.0	NaN
+2913	XS0882561821	SB Capital	2.500000e+10	2016-01-31	2013-01-26	ЕвроКорп	Постоянный	0.0	2.0	30E/360	RUB	0.0	100000.0	NaN
+2914	XS0889402029	Vimpelcom Holdings	1.200000e+10	2018-02-13	2013-02-08	ЕвроКорп	Постоянный	0.0	2.0	30E/360	RUB	0.0	1000.0	NaN
+2915	XS0911599701	TMK Capital	5.000000e+08	2020-04-03	2013-03-27	ЕвроКорп	Постоянный	0.0	2.0	30E/360	USD	0.0	1000.0	NaN
+2916	XS0918604496	EDC Finance	6.000000e+08	2020-04-17	2013-04-13	ЕвроКорп	Постоянный	0.0	2.0	30E/360	USD	0.0	1000.0	NaN
+2917	XS0919504562	LUKOIL Int Finance	1.500000e+09	2023-04-24	2013-04-19	ЕвроКорп	Постоянный	0.0	2.0	30E/360	USD	0.0	1000.0	NaN
+2918	XS0920334900	Far East Capital	5.500000e+08	2018-05-02	2013-04-25	ЕвроКорп	Постоянный	1.0	2.0	30E/360	USD	0.0	1000.0	NaN
+2919	XS0922301717	Polyus Gold Internation	7.500000e+08	2020-04-29	2013-04-20	ЕвроКорп	Постоянный	0.0	2.0	30E/360	USD	0.0	1000.0	NaN
+2920	XS0923110232	OFCB Capital	5.000000e+08	2018-04-25	2013-04-21	ЕвроКорп	Постоянный	0.0	2.0	30E/360	USD	0.0	1000.0	NaN
+2921	XS0940730228	OFCB Capital	3.000000e+08	2019-12-17	2013-06-05	ЕвроКорп	Постоянный	0.0	2.0	30E/360	USD	0.0	1000.0	NaN
+2922	XS0944741833	BKM Finance	2.000000e+08	2023-06-18	2013-06-16	ЕвроКорп	Постоянный	1.0	2.0	30/360	USD	0.0	1000.0	NaN
+2923	XS0974159351	OIM ABS	1.500000e+10	2020-09-20	2013-09-22	Неопределен		0.0	NaN		RUB	0.0	5000000.0	NaN
+2924	XS0974469206	Borets Finance	4.200000e+08	2018-09-26	2013-09-21	ЕвроКорп	Постоянный	0.0	2.0	30E/360	USD	0.0	1000.0	NaN
+2925	XS0975320879	GPB Eurobond Finance	7.500000e+08	2023-12-28	2013-09-26	ЕвроКорп	Переменный	1.0	2.0	30E/360	USD	0.0	1000.0	NaN
+2926	XS0995845566	DME Airport	3.000000e+08	2018-11-26	2013-11-15	ЕвроКорп	Постоянный	0.0	2.0	30E/360	USD	0.0	1000.0	NaN
+2927	XS1076087375	Alfa Holding Issuance	3.500000e+08	2017-06-10	2014-06-06	ЕвроКорп	Постоянный	0.0	1.0	act/act	EUR	0.0	1000.0	NaN
+2928	XS1092320099	4finance S.A	2.000000e+08	2019-08-14	2014-08-16	ЕвроКорп	Постоянный	1.0	2.0	30E/360	USD	0.0	1000.0	NaN
+2929	XS1117300753	Gaz Capital	7.000000e+08	2015-11-12	2014-11-07	ЕвроКорп	Постоянный	0.0	2.0	30E/360	USD	0.0	1000.0	NaN
+2930	XS1143363940	CBOM Finance	5.000000e+09	2025-05-26	2014-11-22	ЕвроКорп	Постоянный	1.0	2.0	30E/360	RUB	0.0	100000.0	NaN
+2931	XS1210016249	BrokerCreditService SP	5.000000e+08	2017-04-12	2015-07-18	ЕвроКорп	Постоянный	0.0	2.0	act/365	RUB	0.0	80000.0	NaN
+2932	XS1235251755	EBRD Bank	3.000000e+09	2020-05-20	2015-05-15	ЕвроКорп	Индексируемый	0.0	4.0	act/act ISDA	RUB	0.0	10000000.0	NaN
+2933	XS1269959034	BrokerCreditService SP	5.000000e+08	2018-09-10	2015-09-05	ЕвроКорп	Прочий	0.0	4.0	act/365	RUB	0.0	80000.0	NaN
+2934	XS1298447019	MMC Finance	1.000000e+09	2022-10-14	2015-10-08	ЕвроКорп	Постоянный	0.0	2.0	30E/360	USD	0.0	1000.0	NaN
+
+OurBonds = bonds[(bonds['EndMtyDate'] > OurDate) & (bonds['BegDistDate'] < OurDate) & (bonds['IssuerName'] == OurIssuer) & (bonds['FaceFTName'] == 'RUB')]
+
+OurBonds.insert(5,'OurDate',OurDate)
+
+OurBonds['time_to_maturity'] = OurBonds['EndMtyDate'] - OurBonds['OurDate']
+
+import numpy as np
+OurBonds['time_to_maturity']= (OurBonds['time_to_maturity'] / np.timedelta64(1, 'D')).astype(int)
+
+OurBonds['time_to_maturity'] = OurBonds['time_to_maturity']/365
