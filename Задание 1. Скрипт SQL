@@ -10,3 +10,41 @@ FROM base1;
 
 SELECT base1.ID, base1.Time, base1.BOARDNAME, base1.ASK, base1.BID
 FROM base1;
+
+SELECT COUNT(*)*100/(SELECT COUNT(*) FROM [Ruslan_BD].[dbo].[bond_discription]) FROM [Ruslan_BD].[dbo].[bond_discription] WHERE [ISIN144A]=' ';
+
+SELECT [ISIN, RegCode, NRDCode], [ISIN144A] INTO [Ruslan_BD].[dbo].[bond_discription_ISIN144A] FROM [Ruslan_BD].[dbo].[bond_discription] WHERE [ISIN144A] !=' ';
+
+ALTER TABLE [Ruslan_BD].[dbo].[bond_discription] DROP COLUMN [ISIN144A];
+
+ALTER TABLE [Ruslan_BD].[dbo].[base_prices] ALTER COLUMN [TIME] INT;
+
+SELECT * INTO [Ruslan_BD].[dbo].[task3] FROM [Ruslan_BD].[dbo].[base_prices]	
+ORDER BY [TIME];
+
+DELETE FROM [Ruslan_BD].[dbo].[task3_1] WHERE ID != ID_prev AND ASK != ' ';
+
+SELECT ID, COUNT([TIME]) AS n_days 
+INTO [Ruslan_BD].[dbo].[task3_2] FROM [Ruslan_BD].[dbo].[task3_1] 
+WHERE ASK=ASK_prev OR ASK=' ' GROUP BY ID;
+
+SELECT ID, COUNT([TIME]) AS N
+INTO [Ruslan_BD].[dbo].[task3_3] FROM [Ruslan_BD].[dbo].[task3_1] 
+GROUP BY ID;
+
+SELECT [Ruslan_BD].[dbo].[task3_3].[ID],n_days, N, n_days*100/N AS share
+INTO [Ruslan_BD].[dbo].[task3_4]
+FROM [Ruslan_BD].[dbo].[task3_2] RIGHT JOIN [Ruslan_BD].[dbo].[task3_3]
+ON [Ruslan_BD].[dbo].[task3_3].[ID]= [Ruslan_BD].[dbo].[task3_2].[ID]
+WHERE [Ruslan_BD].[dbo].[task3_2].[n_days] IS NULL OR n_days*100/N <= 10; 
+
+SELECT [Ruslan_BD].[dbo].[task3_4].[ID], Exchange, CFIName, EmitentName
+INTO [Ruslan_BD].[dbo].[task3_5]
+FROM [Ruslan_BD].[dbo].[task3_4] INNER JOIN [Ruslan_BD].[dbo].[instrs]
+ON [Ruslan_BD].[dbo].[task3_4].[ID]= [Ruslan_BD].[dbo].[instrs].[ID]
+WHERE Exchange = 'Московская Биржа / МБ - Основной' 
+AND (CFIName = 'Облигации / Сектор / Корпоративные' OR CFIName = 'Облигации / Сектор / Региональные');  
+
+SELECT TOP(3) EmitentName
+FROM [Ruslan_BD].[dbo].[task3_5]
+GROUP BY EmitentName;
