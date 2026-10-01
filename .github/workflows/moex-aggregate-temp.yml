@@ -5,6 +5,9 @@ on:
       - chatgpt-moex-aggregation-20261001
     paths-ignore:
       - 'output/**'
+  pull_request:
+    branches:
+      - master
 permissions:
   contents: write
 jobs:
