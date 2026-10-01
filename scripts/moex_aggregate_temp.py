@@ -190,15 +190,63 @@ def make_db(raw_path: Path):
     if rows:
         cur.executemany("INSERT INTO daily VALUES (?,?,?,?,?,?,?,?,?,?,?,?)", rows)
         con.commit()
+
+    # The source collector downloads adjacent date windows with inclusive boundaries.
+    # Deduplicate ticker-date rows before any aggregation to avoid double-counting
+    # value/volume on overlap dates. Preserve diagnostics on conflicts.
+    cur.execute("CREATE INDEX idx_daily_ticker_date_pre ON daily(ticker, trade_date)")
+    duplicate_groups = cur.execute("""
+        SELECT COUNT(*) FROM (
+          SELECT ticker, trade_date
+          FROM daily
+          GROUP BY ticker, trade_date
+          HAVING COUNT(*) > 1
+        )
+    """).fetchone()[0]
+    conflicting_duplicate_groups = cur.execute("""
+        SELECT COUNT(*) FROM (
+          SELECT ticker, trade_date
+          FROM daily
+          GROUP BY ticker, trade_date
+          HAVING COUNT(*) > 1 AND (
+             COUNT(DISTINCT COALESCE(CAST(open AS TEXT),'NULL')) > 1 OR
+             COUNT(DISTINCT COALESCE(CAST(close AS TEXT),'NULL')) > 1 OR
+             COUNT(DISTINCT COALESCE(CAST(high AS TEXT),'NULL')) > 1 OR
+             COUNT(DISTINCT COALESCE(CAST(low AS TEXT),'NULL')) > 1 OR
+             COUNT(DISTINCT COALESCE(CAST(value AS TEXT),'NULL')) > 1 OR
+             COUNT(DISTINCT COALESCE(CAST(volume AS TEXT),'NULL')) > 1
+          )
+        )
+    """).fetchone()[0]
+    cur.execute("""
+        DELETE FROM daily
+        WHERE rowid NOT IN (
+          SELECT MIN(rowid)
+          FROM daily
+          GROUP BY ticker, trade_date
+        )
+    """)
+    con.commit()
+    canonical_rows = cur.execute("SELECT COUNT(*) FROM daily").fetchone()[0]
+
     cur.executescript("""
-    CREATE INDEX idx_daily_ticker_date ON daily(ticker, trade_date);
+    DROP INDEX IF EXISTS idx_daily_ticker_date_pre;
+    CREATE UNIQUE INDEX idx_daily_ticker_date ON daily(ticker, trade_date);
     CREATE INDEX idx_daily_week ON daily(ticker, week_start);
     CREATE INDEX idx_daily_month ON daily(ticker, month_start);
     CREATE INDEX idx_daily_quarter ON daily(ticker, quarter_start);
     CREATE INDEX idx_daily_year ON daily(ticker, year_start);
     """)
     con.commit()
-    return con, {"raw_rows": n, "min_date": min_date, "max_date": max_date}
+    return con, {
+        "raw_rows": n,
+        "canonical_daily_rows": canonical_rows,
+        "removed_duplicate_rows": n - canonical_rows,
+        "duplicate_ticker_date_groups_raw": duplicate_groups,
+        "conflicting_duplicate_groups_raw": conflicting_duplicate_groups,
+        "min_date": min_date,
+        "max_date": max_date
+    }
 
 def p_end(start: str, freq: str) -> str:
     d = dt.date.fromisoformat(start)
@@ -303,6 +351,32 @@ def write_master(master_rows):
         w=csv.DictWriter(f,fieldnames=cols,extrasaction="ignore")
         w.writeheader(); w.writerows(master_rows)
 
+def write_ticker_coverage(con, meta):
+    out = OUT / "Ticker_Coverage.csv"
+    headers = ["ticker","isin","issuer_name","security_type","supertype","currency","listing_level",
+               "first_trade_date","last_trade_date","daily_observations","metadata_match"]
+    sql = """
+      SELECT ticker, MIN(trade_date), MAX(trade_date), COUNT(*)
+      FROM daily
+      GROUP BY ticker
+      ORDER BY ticker
+    """
+    unmatched = []
+    with open(out, "w", encoding="utf-8-sig", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(headers)
+        for ticker, first_dt, last_dt, nobs in con.execute(sql):
+            m = meta.get(ticker, {})
+            matched = 1 if ticker in meta else 0
+            if not matched:
+                unmatched.append(ticker)
+            w.writerow([
+                ticker, m.get("isin",""), m.get("issuer_name",""), m.get("security_type",""),
+                m.get("supertype",""), m.get("currency",""), m.get("listing_level",""),
+                first_dt, last_dt, nobs, matched
+            ])
+    return out, unmatched
+
 def main():
     download(DATA_URL, RAW)
     download(MASTER_URL, MASTER_RAW)
@@ -325,9 +399,15 @@ def main():
         stats[f"{freq}_tickers"] = tickers
         stats[f"{freq}_sha256"] = sha256(p)
 
+    coverage_path, unmatched = write_ticker_coverage(con, meta)
+    stats["ticker_coverage_sha256"] = sha256(coverage_path)
+    stats["observed_tickers"] = con.execute("SELECT COUNT(DISTINCT ticker) FROM daily").fetchone()[0]
+    stats["unmatched_tickers_count"] = len(unmatched)
+    stats["unmatched_tickers"] = unmatched
+
     # QA
     dup = con.execute("SELECT COUNT(*) FROM (SELECT ticker,trade_date,COUNT(*) c FROM daily GROUP BY ticker,trade_date HAVING c>1)").fetchone()[0]
-    stats["duplicate_ticker_date_groups"] = dup
+    stats["duplicate_ticker_date_groups_after_dedup"] = dup
     bad_ohlc = con.execute("""
       SELECT COUNT(*) FROM daily
       WHERE (high IS NOT NULL AND open IS NOT NULL AND high < open)
