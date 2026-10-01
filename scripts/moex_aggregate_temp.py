@@ -23,7 +23,7 @@ import urllib.request
 from pathlib import Path
 
 DATA_URL = "https://moex.foykes.com/datasets/30years_data_1d_interval.csv"
-MASTER_URL = "https://moex.foykes.com/ticker_lists/moex_stocks.csv"
+MASTER_URL = "https://moex.foykes.com/datasets/ticker_lists/moex_stocks.csv"
 OUT = Path("output")
 OUT.mkdir(exist_ok=True)
 RAW = OUT / "30years_data_1d_interval.csv"
