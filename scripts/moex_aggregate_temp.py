@@ -341,11 +341,12 @@ def main():
     with open(OUT/"Build_Stats.json","w",encoding="utf-8") as f:
         json.dump(stats,f,ensure_ascii=False,indent=2)
 
-    # Remove raw / DB from artifact to keep it compact. Final artifact is derived outputs + master + stats.
-    try:
-        DB.unlink()
-    except Exception:
-        pass
+    # Remove large acquisition files / DB from the deliverable. Checksums remain in Build_Stats.json.
+    for tmp_path in (DB, RAW, MASTER_RAW):
+        try:
+            tmp_path.unlink()
+        except Exception:
+            pass
 
 if __name__ == "__main__":
     main()
