@@ -218,6 +218,19 @@ def make_db(raw_path: Path):
           )
         )
     """).fetchone()[0]
+    dup_path = OUT / "Duplicate_Diagnostics.csv"
+    with open(dup_path, "w", encoding="utf-8-sig", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["rowid","ticker","trade_date","open","close","high","low","value","volume"])
+        for rr in cur.execute("""
+          SELECT rowid,ticker,trade_date,open,close,high,low,value,volume
+          FROM daily
+          WHERE (ticker,trade_date) IN (
+            SELECT ticker,trade_date FROM daily GROUP BY ticker,trade_date HAVING COUNT(*)>1
+          )
+          ORDER BY ticker,trade_date,rowid
+        """):
+            w.writerow(rr)
     cur.execute("""
         DELETE FROM daily
         WHERE rowid NOT IN (
@@ -385,6 +398,7 @@ def main():
     write_master(master_rows)
 
     con, stats = make_db(RAW)
+    stats["duplicate_diagnostics_sha256"] = sha256(OUT / "Duplicate_Diagnostics.csv")
     stats["daily_sha256"] = sha256(RAW)
     stats["master_sha256"] = sha256(MASTER_RAW)
     stats["master_rows"] = len(master_rows)
