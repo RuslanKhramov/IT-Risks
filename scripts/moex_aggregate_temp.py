@@ -6,7 +6,7 @@ Uses only Python standard library.
 Source:
   https://moex.foykes.com/datasets/30years_data_1d_interval.csv
 Metadata:
-  https://moex.foykes.com/ticker_lists/moex_stocks.csv
+  https://moex.foykes.com/datasets/ticker_lists/moex_stocks.csv
 """
 from __future__ import annotations
 
