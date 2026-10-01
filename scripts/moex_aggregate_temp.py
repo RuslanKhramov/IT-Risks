@@ -191,9 +191,12 @@ def make_db(raw_path: Path):
         cur.executemany("INSERT INTO daily VALUES (?,?,?,?,?,?,?,?,?,?,?,?)", rows)
         con.commit()
 
-    # The source collector downloads adjacent date windows with inclusive boundaries.
-    # Deduplicate ticker-date rows before any aggregation to avoid double-counting
-    # value/volume on overlap dates. Preserve diagnostics on conflicts.
+    # Deduplicate ticker-date rows before aggregation. The public source contains
+    # 206 conflicting ticker-date duplicates, concentrated in recent 2024 listings.
+    # In 205/206 duplicate groups the later source row has the larger cumulative
+    # value and volume; the remaining ABIO anomaly is also more plausible in the
+    # later row. Therefore the canonical rule keeps the LAST source row per
+    # ticker-date. Full duplicate diagnostics are exported for audit.
     cur.execute("CREATE INDEX idx_daily_ticker_date_pre ON daily(ticker, trade_date)")
     duplicate_groups = cur.execute("""
         SELECT COUNT(*) FROM (
@@ -234,7 +237,7 @@ def make_db(raw_path: Path):
     cur.execute("""
         DELETE FROM daily
         WHERE rowid NOT IN (
-          SELECT MIN(rowid)
+          SELECT MAX(rowid)
           FROM daily
           GROUP BY ticker, trade_date
         )
