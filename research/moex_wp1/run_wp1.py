@@ -235,7 +235,7 @@ if len(R):
     joint["leadership_agrees"]=np.where(joint["leader_ils"].notna(), joint["leader_ils"]==joint["valuation_leader"], np.nan)
     joint.to_csv(f"{OUT}/price_vs_valuation_leadership.csv",index=False)
 # basic figures
-coin=res.dropna(subset=["ils_c"]).copy()
+coin=res.dropna(subset=["ils_c"]).copy() if "ils_c" in res.columns else pd.DataFrame()
 if len(coin):
     plt.figure(figsize=(9,5)); plt.hist(coin.ils_c,bins=12);plt.axvline(.5,ls="--");plt.xlabel("Common-share Information Leadership Share");plt.ylabel("Pairs");plt.tight_layout();plt.savefig(f"{OUT}/figures/fig_ils_distribution.png",dpi=220);plt.close()
     plt.figure(figsize=(8,6));plt.scatter(coin.log_value_gap,coin.ils_c);plt.axhline(.5,ls="--");plt.xlabel("Log trading-value gap (common - preferred)");plt.ylabel("Common ILS");plt.tight_layout();plt.savefig(f"{OUT}/figures/fig_liquidity_vs_ils.png",dpi=220);plt.close()
