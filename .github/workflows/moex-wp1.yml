@@ -1,0 +1,27 @@
+name: MOEX WP1 Research
+on:
+  push:
+    branches: [research/moex-wp1-20261002]
+    paths:
+      - 'research/moex_wp1/**'
+      - '.github/workflows/moex-wp1.yml'
+  workflow_dispatch:
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install
+        run: pip install pandas numpy scipy statsmodels scikit-learn matplotlib pyarrow requests
+      - name: Run
+        run: python research/moex_wp1/run_wp1.py
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: moex-wp1-results
+          path: results/
+          retention-days: 7
