@@ -243,3 +243,47 @@ if len(roll):
     rr=roll.groupby("window_end").ils_c.mean().dropna()
     plt.figure(figsize=(10,5));plt.plot(rr.index,rr.values);plt.axhline(.5,ls="--");plt.ylabel("Mean rolling common ILS");plt.tight_layout();plt.savefig(f"{OUT}/figures/fig_rolling_ils.png",dpi=220);plt.close()
 print("DONE",len(d),len(res),len(P),len(R))
+
+# compact audit snapshot for manuscript generation
+summary={}
+summary["daily_rows"]=int(len(d))
+summary["tickers"]=int(d["ticker"].nunique())
+summary["pairs_total"]=int(len(res))
+summary["pairs_ge_500d"]=int((res["n_days"]>=500).sum()) if "n_days" in res else 0
+summary["full_sample_cointegrated_5"]=int(res.get("cointegrated_5",pd.Series(dtype=float)).fillna(0).sum()) if len(res) else 0
+summary["rolling_windows"]=int(len(roll))
+if len(roll):
+    summary["rolling_pairs"]=int(roll[["common","preferred"]].drop_duplicates().shape[0])
+    summary["rolling_common_leader_share"]=float((roll["ils_c"]>.5).mean())
+    summary["rolling_mean_common_ils"]=float(roll["ils_c"].mean())
+    summary["rolling_median_common_ils"]=float(roll["ils_c"].median())
+    rr=roll.copy(); rr["year"]=pd.to_datetime(rr["window_end"]).dt.year
+    yr=rr.groupby("year").agg(windows=("ils_c","size"),mean_common_ils=("ils_c","mean"),common_leader_share=("ils_c",lambda x:float((x>.5).mean()))).reset_index()
+    yr.to_csv(f"{OUT}/rolling_year_summary.csv",index=False)
+if len(res):
+    for col in ["ret_corr","log_value_gap","amihud_gap","vol_gap","zero_gap","mean_log_spread"]:
+        if col in res: summary["median_"+col]=float(res[col].median(skipna=True))
+srb=pd.read_csv(f"{OUT}/sradv_oos_benchmark.csv")
+summary["sradv_rmse"]=float(srb.loc[srb.model=="SRADV","RMSE"].iloc[0])
+summary["issuer_mean_rmse"]=float(srb.loc[srb.model=="IssuerMean","RMSE"].iloc[0])
+summary["sradv_rmse_improvement_pct"]=float(100*(1-summary["sradv_rmse"]/summary["issuer_mean_rmse"]))
+summary["sradv_mae"]=float(srb.loc[srb.model=="SRADV","MAE"].iloc[0])
+summary["issuer_mean_mae"]=float(srb.loc[srb.model=="IssuerMean","MAE"].iloc[0])
+rb=pd.read_csv(f"{OUT}/rsldv_oos_benchmark.csv")
+summary["rsldv_pairs"]=int(len(rb))
+summary["rsldv_better_pairs"]=int(rb["RSLDV_better"].sum()) if len(rb) else 0
+summary["rsldv_better_share"]=float(rb["RSLDV_better"].mean()) if len(rb) else np.nan
+summary["rsldv_median_rmse"]=float(rb["RSLDV_RMSE_logprice"].median()) if len(rb) else np.nan
+summary["rw_median_rmse"]=float(rb["RandomWalk_RMSE_logprice"].median()) if len(rb) else np.nan
+summary["rsldv_median_improvement_pct"]=float(100*np.median(1-rb["RSLDV_RMSE_logprice"]/rb["RandomWalk_RMSE_logprice"])) if len(rb) else np.nan
+if os.path.exists(f"{OUT}/price_vs_valuation_leadership.csv"):
+    j=pd.read_csv(f"{OUT}/price_vs_valuation_leadership.csv")
+    valid=j.dropna(subset=["leader_ils"]) if "leader_ils" in j else pd.DataFrame()
+    summary["leadership_comparison_n"]=int(len(valid))
+    summary["price_valuation_agreement_share"]=float(valid["leadership_agrees"].mean()) if len(valid) else np.nan
+import json
+with open(f"{OUT}/summary_metrics.json","w") as f: json.dump(summary,f,indent=2,default=str)
+with open(f"{OUT}/SUMMARY.md","w") as f:
+    f.write("# WP1 empirical audit\n\n")
+    for k,v in summary.items(): f.write(f"- **{k}**: {v}\n")
+print("SUMMARY",summary)
