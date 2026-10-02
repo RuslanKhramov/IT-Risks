@@ -1,0 +1,41 @@
+name: WP1 Slim Publication Package
+on:
+  workflow_dispatch:
+  push:
+    branches: [research/moex-wp1-20261002]
+    paths:
+      - '.github/workflows/wp1-slim-package.yml'
+jobs:
+  slim:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: WP1-Russian-Dual-Class-1997-2026-FINAL
+          path: source_artifact
+          github-token: ${{ github.token }}
+          run-id: 36952426696
+      - name: Build slim package
+        run: |
+          mkdir work
+          unzip -q source_artifact/WP1_Russian_Dual_Class_1997_2026_FINAL.zip -d work
+          find work -type f -name 'daily_pair_universe_v3.parquet' -delete
+          find work -type f -name 'WP1_analysis_sample.parquet' -delete
+          find work -type f -name 'WP1_analysis_sample.csv.gz' -delete
+          find work -type f -name 'WP1_sample_*.parquet' -delete
+          cd work
+          zip -qr ../WP1_publication_package_NO_SAMPLE.zip .
+          cd ..
+          echo "Slim package size:"
+          du -h WP1_publication_package_NO_SAMPLE.zip
+          echo "Files:"
+          find work -type f | sort
+      - name: Upload slim package
+        uses: actions/upload-artifact@v4
+        with:
+          name: WP1-publication-package-NO-SAMPLE
+          path: WP1_publication_package_NO_SAMPLE.zip
+          retention-days: 7
