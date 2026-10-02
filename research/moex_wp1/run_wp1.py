@@ -242,7 +242,42 @@ if len(coin):
 if len(roll):
     rr=roll.groupby("window_end").ils_c.mean().dropna()
     plt.figure(figsize=(10,5));plt.plot(rr.index,rr.values);plt.axhline(.5,ls="--");plt.ylabel("Mean rolling common ILS");plt.tight_layout();plt.savefig(f"{OUT}/figures/fig_rolling_ils.png",dpi=220);plt.close()
+
+# compact machine-readable research summary for audit/log retrieval
+summary = {
+    "daily_rows": int(len(d)),
+    "tickers_observed": int(d["ticker"].nunique()),
+    "sample_start": str(d["date"].min().date()),
+    "sample_end": str(d["date"].max().date()),
+    "pairs_total": int(len(PAIRS)),
+    "pairs_ge500": int((res["n_days"]>=500).sum()) if "n_days" in res else 0,
+    "fullsample_cointegrated_5pct": int(res.get("cointegrated_5", pd.Series(dtype=float)).fillna(0).sum()) if len(res) else 0,
+    "rolling_windows_valid": int(len(roll)),
+    "rolling_common_leader_share": float((roll["ils_c"]>0.5).mean()) if len(roll) and "ils_c" in roll else None,
+    "rolling_median_common_ils": float(roll["ils_c"].median()) if len(roll) and "ils_c" in roll else None,
+    "sradv_test_n": int(len(te)),
+    "sradv_rmse": float(bench["RMSE"]),
+    "issuer_mean_rmse": float(bench0["RMSE"]),
+    "sradv_mae": float(bench["MAE"]),
+    "issuer_mean_mae": float(bench0["MAE"]),
+    "rsldv_pairs": int(len(rsbench)),
+    "rsldv_better_pairs": int(pd.DataFrame(rsbench)["RSLDV_better"].sum()) if len(rsbench) else 0,
+    "rsldv_median_rmse_ratio": float((pd.DataFrame(rsbench)["RSLDV_RMSE_logprice"]/pd.DataFrame(rsbench)["RandomWalk_RMSE_logprice"]).median()) if len(rsbench) else None
+}
+print("WP1_SUMMARY_JSON", json.dumps(summary, ensure_ascii=False, default=str))
+print("SRADV_COEFFICIENTS_JSON", pd.DataFrame({"term":fit.params.index,"coef":fit.params.values,"se":fit.bse.values,"p":fit.pvalues.values}).to_json(orient="records"))
+if len(roll):
+    tmp = roll.dropna(subset=["ils_c"]).copy()
+    tmp["year"] = pd.to_datetime(tmp["window_end"]).dt.year
+    yr = tmp.groupby("year").agg(n=("ils_c","size"),mean_common_ils=("ils_c","mean"),median_common_ils=("ils_c","median"),common_leader_share=("ils_c",lambda x:(x>0.5).mean())).reset_index()
+    print("ROLLING_BY_YEAR_JSON", yr.to_json(orient="records"))
+if len(rsbench):
+    rb = pd.DataFrame(rsbench).copy()
+    rb["ratio"]=rb["RSLDV_RMSE_logprice"]/rb["RandomWalk_RMSE_logprice"]
+    print("RSLDV_BEST_JSON", rb.sort_values("ratio").head(10).to_json(orient="records"))
+    print("RSLDV_WORST_JSON", rb.sort_values("ratio",ascending=False).head(10).to_json(orient="records"))
 print("DONE",len(d),len(res),len(P),len(R))
+
 
 # compact audit snapshot for manuscript generation
 summary={}
