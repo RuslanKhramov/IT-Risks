@@ -18,11 +18,12 @@ jobs:
         with:
           python-version: '3.11'
       - name: Install
-        run: pip install pandas numpy scipy statsmodels scikit-learn matplotlib pyarrow requests
+        run: pip install pandas numpy scipy statsmodels scikit-learn matplotlib pyarrow requests python-docx openpyxl
       - name: Run
         run: |
           python research/moex_wp1/run_wp1_v2.py
           python research/moex_wp1/post_wp1_v3.py
+          python research/moex_wp1/build_wp1_package.py
       - name: Publish compact audit snapshot
         run: |
           mkdir -p wp1_results_snapshot
@@ -53,4 +54,17 @@ jobs:
         with:
           name: moex-wp1-v3-summary
           path: wp1_results_snapshot/
+          retention-days: 7
+
+      - name: Upload final publication package
+        uses: actions/upload-artifact@v4
+        with:
+          name: WP1-Russian-Dual-Class-1997-2026-FINAL
+          path: |
+            WP1_Russian_Dual_Class_1997_2026_FINAL.zip
+            wp1_final_package/WP1_Manuscript.docx
+            wp1_final_package/WP1_Manuscript.md
+            wp1_final_package/WP1_Empirical_Results.xlsx
+            wp1_final_package/WP1_Hypotheses_and_Findings.csv
+            wp1_final_package/README_REPRODUCIBILITY.md
           retention-days: 7
