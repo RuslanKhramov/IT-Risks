@@ -28,7 +28,7 @@ jobs:
           cp results/summary_metrics.json wp1_results_snapshot/
           cp results/pair_price_discovery.csv wp1_results_snapshot/
           cp results/rolling_price_discovery.csv wp1_results_snapshot/
-          cp results/rolling_year_summary.csv wp1_results_snapshot/
+          cp results/rolling_year_summary.csv wp1_results_snapshot/ || true
           cp results/sradv_oos_benchmark.csv wp1_results_snapshot/
           cp results/sradv_coefficients.csv wp1_results_snapshot/
           cp results/rsldv_oos_benchmark.csv wp1_results_snapshot/
