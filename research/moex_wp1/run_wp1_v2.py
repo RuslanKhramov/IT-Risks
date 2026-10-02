@@ -227,7 +227,7 @@ P2=P.copy()
 P2["fair"]=fe_predict(P2,coef,features,mu);P2["gap_to_fair"]=P2["fair"]-P2["spread"]
 for f in base_features: P2[f"d_{f}"]=P2.groupby("issuer")[f].diff()
 rcc_rows=[]; rcc_coef=[]; rcc_pred=[]
-for h in [1,4,13]:
+for h in [1,4,13,26,52]:
     q=P2.copy()
     q["future_spread"]=q.groupby("issuer")["spread"].shift(-h)
     q["delta_h"]=q.future_spread-q.spread
