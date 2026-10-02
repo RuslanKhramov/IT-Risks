@@ -24,6 +24,7 @@ jobs:
           python research/moex_wp1/run_wp1_v2.py
           python research/moex_wp1/post_wp1_v3.py
           python research/moex_wp1/build_wp1_package.py
+          python research/moex_wp1/export_sample_only.py
       - name: Publish compact audit snapshot
         run: |
           mkdir -p wp1_results_snapshot
@@ -69,4 +70,11 @@ jobs:
             wp1_final_package/WP1_Empirical_Results.xlsx
             wp1_final_package/WP1_Hypotheses_and_Findings.csv
             wp1_final_package/README_REPRODUCIBILITY.md
+          retention-days: 7
+
+      - name: Upload sample-only export
+        uses: actions/upload-artifact@v4
+        with:
+          name: WP1-sample-only
+          path: wp1_sample_export/
           retention-days: 7
