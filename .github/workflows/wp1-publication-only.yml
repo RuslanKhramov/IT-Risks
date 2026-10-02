@@ -1,0 +1,40 @@
+name: WP1 Publication Only
+on:
+  push:
+    branches: [research/moex-wp1-20261002]
+    paths:
+      - '.github/workflows/wp1-publication-only.yml'
+  workflow_dispatch:
+permissions:
+  actions: read
+  contents: read
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download completed WP1 artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p source_artifact
+          gh run download 36952426696 -R RuslanKhramov/IT-Risks -n WP1-Russian-Dual-Class-1997-2026-FINAL -D source_artifact
+      - name: Extract publication package and remove heavy sample
+        run: |
+          mkdir -p unpacked
+          unzip -q source_artifact/WP1_Russian_Dual_Class_1997_2026_FINAL.zip -d unpacked
+          echo "Before removal:"
+          find unpacked -type f -printf '%s %p\n' | sort -nr | head -20
+          find unpacked -type f \( -name 'daily_pair_universe_v3.parquet' -o -name 'WP1_analysis_sample.parquet' -o -name 'WP1_analysis_sample.csv.gz' -o -name 'WP1_sample_*.parquet' \) -delete
+          echo "After removal:"
+          find unpacked -type f -printf '%s %p\n' | sort -nr | head -30
+          cd unpacked
+          zip -qr ../WP1-publication-package-no-sample.zip .
+          cd ..
+          ls -lh WP1-publication-package-no-sample.zip
+      - name: Upload publication-only package
+        uses: actions/upload-artifact@v4
+        with:
+          name: WP1-publication-package-no-sample
+          path: WP1-publication-package-no-sample.zip
+          retention-days: 7
