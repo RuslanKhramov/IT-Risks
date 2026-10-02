@@ -1,0 +1,44 @@
+name: MOEX WP1 Sample Only
+on:
+  push:
+    branches: [research/moex-wp1-20261002]
+    paths:
+      - 'research/moex_wp1/export_sample_standalone.py'
+      - '.github/workflows/moex-wp1-sample-only.yml'
+  workflow_dispatch:
+jobs:
+  sample:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install
+        run: pip install pandas numpy pyarrow requests
+      - name: Export sample
+        run: python research/moex_wp1/export_sample_standalone.py
+      - name: Upload whole compact sample
+        uses: actions/upload-artifact@v4
+        with:
+          name: WP1-analysis-sample
+          path: |
+            wp1_sample_only/WP1_analysis_sample.parquet
+            wp1_sample_only/WP1_analysis_sample.csv.gz
+            wp1_sample_only/WP1_pair_master.csv
+            wp1_sample_only/WP1_dividend_events.csv
+            wp1_sample_only/FILE_SIZES.csv
+            wp1_sample_only/README_SAMPLE.txt
+          retention-days: 7
+      - name: Upload split sample
+        uses: actions/upload-artifact@v4
+        with:
+          name: WP1-analysis-sample-split
+          path: |
+            wp1_sample_only/WP1_sample_1997_2004.parquet
+            wp1_sample_only/WP1_sample_2005_2010.parquet
+            wp1_sample_only/WP1_sample_2011_2016.parquet
+            wp1_sample_only/WP1_sample_2017_2021.parquet
+            wp1_sample_only/WP1_sample_2022_2026.parquet
+          retention-days: 7
