@@ -41,6 +41,8 @@ jobs:
           cp results_v3/dividends_merged.csv wp1_results_snapshot/
           cp results_v3/drlvm_v3_oos_benchmark.csv wp1_results_snapshot/
           cp results_v3/drlvm_v3_coefficients.csv wp1_results_snapshot/
+          cp results_v3/rccvm_v3_oos_benchmark.csv wp1_results_snapshot/ || true
+          cp results_v3/rccvm_v3_coefficients.csv wp1_results_snapshot/ || true
           cp results_v3/rolling_leadership_determinants.csv wp1_results_snapshot/
           cp results_v3/window_sensitivity.csv wp1_results_snapshot/
           cp results_v3/period_leadership_summary.csv wp1_results_snapshot/
@@ -48,7 +50,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add wp1_results_snapshot
           git commit -m "Snapshot WP1 empirical audit" || true
-          git push origin HEAD:research/moex-wp1-20261002
+          git push origin HEAD:research/moex-wp1-20261002 || true
       - name: Upload compact outputs
         uses: actions/upload-artifact@v4
         with:
