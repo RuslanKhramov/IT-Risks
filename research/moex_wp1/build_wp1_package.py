@@ -29,7 +29,7 @@ roll=pd.read_csv("results_v2/rolling_price_discovery.csv")
 ry=pd.read_csv("results_v2/rolling_year_summary.csv") if Path("results_v2/rolling_year_summary.csv").exists() else pd.DataFrame()
 drl=pd.read_csv("results_v3/drlvm_v3_oos_benchmark.csv")
 drlcoef=pd.read_csv("results_v3/drlvm_v3_coefficients.csv")
-rcc=pd.read_csv("results_v2/rccvm_oos_benchmark.csv")
+rcc=pd.read_csv("results_v3/rccvm_v3_oos_benchmark.csv")
 sens=pd.read_csv("results_v3/window_sensitivity.csv")
 period=pd.read_csv("results_v3/period_leadership_summary.csv")
 det=pd.read_csv("results_v3/rolling_leadership_determinants.csv")
@@ -50,7 +50,7 @@ mean_ils=float(v2["rolling_mean_common_ils"])
 drl_imp=float(v3["drlvm_v3_rmse_improvement_pct"])
 div_coef=float(v3["drlvm_v3_dividend_coef"])
 div_p=float(v3["drlvm_v3_dividend_p"])
-last_div=v3.get("dividend_last_date")
+last_div=v3.get("dividend_last_date")\nvaluation_end=v3.get("valuation_sample_end")
 
 def pct(x,d=1): return f"{100*x:.{d}f}%"
 def num(x,d=3):
@@ -70,7 +70,7 @@ hstatus={
 "H2":"Supported" if .4<common_share<.6 else "Mixed",
 "H3":status_h3(),
 "H4":"Supported, economically modest" if drl_imp>0 else "Not supported",
-"H5":"Supported only at the annual horizon" if float(rcc.loc[rcc.h_weeks==52,"RMSE_improvement_pct"].iloc[0])>0 else "Not supported",
+"H5":"Supported only at the annual horizon" if (len(rcc[rcc.h_weeks==52]) and float(rcc.loc[rcc.h_weeks==52,"RMSE_improvement_pct"].iloc[0])>0) else "Not supported",
 "H6":"Supported" if sensitivity_ok() else "Mixed"
 }
 
@@ -97,7 +97,7 @@ hypotheses=[
 ("H2","Information leadership is time-varying rather than structurally assigned to one share class.",hstatus["H2"],f"{roll_n} valid rolling windows across {roll_pairs} pairs; common leads in {pct(common_share,2)} of windows; mean common ILS={mean_ils:.3f}."),
 ("H3","Within-issuer changes in relative liquidity are associated with changes in information leadership.",hstatus["H3"],"Tested with issuer-FE rolling regressions of ILS/MIS/Hasbrouck mid-share on standardized liquidity and dividend-right gaps."),
 ("H4","A structural relative-valuation model using cash-flow rights, liquidity, trading frictions, volatility and market state improves out-of-sample valuation relative to an issuer-mean benchmark.",hstatus["H4"],f"DRLVM v3 improves RMSE by {drl_imp:.2f}% versus issuer mean; dividend-yield-gap coefficient={div_coef:.3f}, p={div_p:.4g}."),
-("H5","Deviations from the structural fair spread predict subsequent convergence.",hstatus["H5"],"RCCVM underperforms random walk at 1-26 weeks but marginally improves RMSE at 52 weeks; directional accuracy is strongest at 52 weeks."),
+("H5","Deviations from the structural fair spread predict subsequent convergence.",hstatus["H5"],"RCCVM v3 is estimated only on the dividend-covered valuation sample; horizon-by-horizon RMSE is benchmarked against a random walk."),
 ("H6","The absence of a permanently dominant share class is robust to alternative price-discovery window lengths.",hstatus["H6"],"Re-estimated at 250, 500 and 750 trading-day windows.")
 ]
 pd.DataFrame(hypotheses,columns=["Hypothesis","Statement","Assessment","Evidence"]).to_csv(OUT/"WP1_Hypotheses_and_Findings.csv",index=False)
@@ -127,7 +127,7 @@ The third strand studies price discovery in cointegrated systems. Engle and Gran
 
 Russian dual-class evidence remains comparatively sparse. Muravyev (2009) studies 1997–2005 and finds support for both control-contest and liquidity explanations, with structural breaks around the 1998 crisis and subsequent institutional development. Muravyev (2013) uses statutory variation in class rights to study investor protection. More recent Russian work documents the institutional persistence of dual-class structures, while a 2026 HSE student thesis provides an intraday microstructure analysis for 2023–2026. The present study does not claim to be the first Russian price-discovery exercise. Its contribution is the long daily horizon, the systematic rolling comparison of multiple price-discovery measures, and the explicit separation of information leadership from contractual relative valuation."""
 hyptext="""Six hypotheses organize the empirical analysis. H1 predicts that a majority of sufficiently long-lived common–preferred pairs are cointegrated because both securities load on a common issuer-level fundamental trend. H2 predicts that price-discovery leadership is time-varying rather than permanently assigned to ordinary shares: contractual voting rights do not imply that ordinary shares are always the marginal information venue. H3 predicts that within-issuer changes in relative liquidity are associated with changes in information leadership. H4 predicts that a rights-and-liquidity model of the relative spread outperforms a simple historical issuer-mean benchmark out of sample. H5 predicts that deviations from the structural fair spread forecast subsequent convergence. H6 predicts that the central leadership result is robust to alternative rolling-window lengths."""
-data_methods=f"""The security universe contains {len(pairs)} common–preferred pairs, or {daily.ticker.nunique()} tickers, identified before estimation. Daily OHLC, value and volume fields are drawn from the public 30-year Moscow Exchange aggregation maintained by Foykes. The resulting filtered panel contains {len(daily):,} security-day observations from {sample_start} through {sample_end}. Because the primary price archive is an external aggregation rather than a frozen official ISS extract, the replication package retains the exact filtering code and should be accompanied by a hash of the raw source at journal submission. Dividend events are merged from the official Moscow Exchange ISS security-dividend endpoint with the legacy Foykes dividend archive as a historical fallback. The merged event file contains {len(div):,} ticker-date dividend observations and extends through {last_div}.
+data_methods=f"""The security universe contains {len(pairs)} common–preferred pairs, or {daily.ticker.nunique()} tickers, identified before estimation. Daily OHLC, value and volume fields are drawn from the public 30-year Moscow Exchange aggregation maintained by Foykes. The resulting filtered panel contains {len(daily):,} security-day observations from {sample_start} through {sample_end}. Because the primary price archive is an external aggregation rather than a frozen official ISS extract, the replication package retains the exact filtering code and should be accompanied by a hash of the raw source at journal submission. The pipeline attempts to query the official Moscow Exchange ISS security-dividend endpoint and also loads the legacy Foykes dividend archive. In the automated research environment the ISS endpoint returned no usable dividend rows, so the cash-flow-right series used in the present valuation block is the Foykes event history. It contains {len(div):,} ticker-date events through {last_div}. To prevent post-coverage zeros from being misread as genuine zero dividends, the valuation and forecasting sample is capped at {valuation_end}, one trailing-365-day window after the last observed event. The price-discovery analysis remains on the full daily sample through {sample_end}.
 
 For each ticker, the baseline price variable is the logarithm of the daily close. Returns are first differences of log prices. Trading activity is measured by ruble trading value and volume. Illiquidity is measured with the Amihud absolute-return-to-trading-value ratio. Zero-return incidence provides a second low-frequency trading-friction proxy. Realized dividend rights are summarized by dividends paid over the previous 365 calendar days divided by current price. For each common–preferred pair, relative variables are constructed as common minus preferred differences, with trading value and Amihud measures expressed in log-transformed form.
 
@@ -150,7 +150,7 @@ The rolling determinant regressions provide a direct test of H3. Rather than com
 
 The valuation results are more favorable to cash-flow rights than to a simple liquidity-only story. The updated DRLVM, using the merged official MOEX dividend history, produces an out-of-sample RMSE improvement of {drl_imp:.2f}% relative to an issuer-specific historical-mean benchmark. The gain is economically modest, but it is obtained in a strict chronological holdout rather than in-sample. The realized dividend-yield gap coefficient is {div_coef:.3f} with p={div_p:.4g}. The full model also controls for trading value, Amihud illiquidity, volatility, zero returns and market-state indicators. H4 is supported in a qualified sense: the proposed model adds forecasting information, but the magnitude does not justify claims of a large pricing inefficiency.
 
-RCCVM supplies an important falsification result. At 1, 4, 13 and 26 weeks, the model fails to beat a random-walk forecast in RMSE terms. At 52 weeks it achieves a small positive improvement, while directional accuracy rises to roughly {float(rcc.loc[rcc.h_weeks==52,"direction_accuracy"].iloc[0])*100:.1f}%. The gross signal Sharpe ratio remains low. Consequently, H5 is not supported as a broad short-horizon convergence claim. The fair-value gap behaves more like a slow-moving valuation anchor than a short-term trading signal. This distinction is central to the interpretation of dual-class “mispricing”: a large relative-price deviation can be economically meaningful without being rapidly arbitraged away.
+RCCVM supplies an important falsification result. Across 1, 4, 13, 26 and 52 weeks, RCCVM v3 is evaluated only inside the dividend-covered valuation sample ending {valuation_end}. The model's horizon-by-horizon RMSE and directional accuracy are reported against a random-walk benchmark; the annual-horizon directional accuracy is {float(rcc.loc[rcc.h_weeks==52,"direction_accuracy"].iloc[0])*100:.1f}% when that horizon is estimable. The gross signal Sharpe ratio remains low. Consequently, H5 is not supported as a broad short-horizon convergence claim. The fair-value gap behaves more like a slow-moving valuation anchor than a short-term trading signal. This distinction is central to the interpretation of dual-class “mispricing”: a large relative-price deviation can be economically meaningful without being rapidly arbitraged away.
 
 Taken together, the results separate three empirical objects that are often conflated. Cointegration describes whether two class prices share a long-run stochastic trend. Information leadership describes which class contributes more to innovations in that trend during a particular window. DRLVM describes the relative level around which the two classes trade after accounting for observable rights and frictions. The fact that ordinary shares lead in only about half of rolling windows is fully compatible with a positive long-run ordinary-share premium, and the fact that DRLVM identifies a fair-spread deviation does not imply profitable short-horizon convergence."""
 discussion="""The evidence changes how the Russian common–preferred premium should be interpreted. Muravyev (2009) showed that control and liquidity were relevant for the early Russian market. The present long-horizon evidence does not overturn that conclusion; it decomposes it. The ordinary-share premium is not equivalent to ordinary-share information leadership. A class can command a control-related or liquidity-related price premium even when preferred shares are the faster incorporator of issuer-level information during a particular period.
@@ -249,8 +249,8 @@ for h,t in sections:
           ["Pairs with >=500 overlap days",n_pairs_500],
           ["Baseline rolling window","500 trading days; 125-day step"],
           ["Alternative windows","250 and 750 trading days"],
-          ["Dividend data",f"MOEX ISS + Foykes fallback; last event {last_div}"],
-          ["Out-of-sample split","Chronological final 20%"]
+          ["Dividend data",f"Foykes event archive used in run; last event {last_div}; valuation sample ends {valuation_end}"],
+          ["Out-of-sample split","Chronological final 20% within the valid valuation sample"]
         ],columns=["Item","Value"])
         add_df_table(design,font=9)
     if h.startswith("5."):
@@ -292,7 +292,7 @@ doc.add_heading("Appendix D. Historical-period leadership",level=1);add_df_table
 doc.add_heading("Appendix E. DRLVM coefficients",level=1);add_df_table(drlcoef,maxrows=30,font=8)
 doc.add_heading("Appendix F. Rolling leadership determinant regressions",level=1);add_df_table(det,maxrows=100,font=7)
 doc.add_heading("Appendix G. Reproducibility",level=1)
-add_text("""The package contains the exact pair universe, analysis scripts, merged dividend-event file, compact and full empirical outputs, figures and an empirical workbook. The main daily source is downloaded by the analysis script from the public Foykes 30-year MOEX aggregation and filtered to the pre-specified 86 tickers. Dividend histories are queried from the official MOEX ISS endpoint and merged with the legacy Foykes archive as a fallback. All model splits are chronological; the market-regime classifier is trained on the estimation sample only. Random seeds are fixed where stochastic clustering is used.""")
+add_text("""The package contains the exact pair universe, analysis scripts, merged dividend-event file, compact and full empirical outputs, figures and an empirical workbook. The main daily source is downloaded by the analysis script from the public Foykes 30-year MOEX aggregation and filtered to the pre-specified 86 tickers. The code queries the official MOEX ISS dividend endpoint, but the automated run returned zero usable ISS dividend rows; the current cash-flow-right model therefore uses the legacy Foykes dividend-event archive and caps the valuation sample at {valuation_end}. All model splits are chronological; the market-regime classifier is trained on the estimation sample only. Random seeds are fixed where stochastic clustering is used.""")
 doc.save(OUT/"WP1_Manuscript.docx")
 
 # ----- Excel empirical workbook -----
@@ -314,7 +314,7 @@ def sheet_from_df(name,df):
 overview=pd.DataFrame([
  ["sample_start",str(sample_start)],["sample_end",str(sample_end)],["daily_rows",len(daily)],["tickers",daily.ticker.nunique()],
  ["pairs",len(pairs)],["pairs_ge500",n_pairs_500],["cointegrated_5pct",coin],["rolling_windows",roll_n],["common_leader_share",common_share],
- ["mean_common_ils",mean_ils],["drlvm_v3_rmse_improvement_pct",drl_imp],["dividend_last_date",last_div]
+ ["mean_common_ils",mean_ils],["drlvm_v3_rmse_improvement_pct",drl_imp],["dividend_last_date",last_div],["valuation_sample_end",valuation_end]
 ],columns=["metric","value"])
 sheet_from_df("Overview",overview)
 sheet_from_df("Hypotheses",pd.DataFrame(hypotheses,columns=["Hypothesis","Statement","Assessment","Evidence"]))
@@ -343,7 +343,7 @@ readme=f"""# WP1 final package
 ## Empirical scale
 - {len(daily):,} security-day observations.
 - {daily.ticker.nunique()} tickers, {len(pairs)} issuer pairs.
-- Sample: {sample_start} to {sample_end}.
+- Price-discovery sample: {sample_start} to {sample_end}.\n- Dividend-rights valuation sample capped at {valuation_end} because the automated ISS dividend query returned no usable rows and the fallback event archive ends {last_div}.
 - {coin}/{n_pairs_500} sufficiently long pairs cointegrated at the 5% level.
 - {roll_n} valid 500-day rolling price-discovery windows.
 - Common-share leadership share: {common_share:.4f}.
@@ -400,7 +400,7 @@ for src in ["research/moex_wp1/pairs.csv","research/moex_wp1/run_wp1_v2.py","res
 for src in [
  "results_v2/summary_metrics.json","results_v2/pair_price_discovery.csv","results_v2/rolling_price_discovery.csv",
  "results_v2/rolling_pair_summary.csv","results_v2/rolling_year_summary.csv","results_v2/drlvm_oos_benchmark.csv",
- "results_v2/drlvm_coefficients.csv","results_v2/rccvm_oos_benchmark.csv","results_v2/rccvm_coefficients.csv",
+ "results_v2/drlvm_coefficients.csv","results_v3/rccvm_v3_oos_benchmark.csv","results_v3/rccvm_v3_coefficients.csv",
  "results_v2/price_discovery_valuation_joint.csv","results_v3/summary_v3.json","results_v3/dividends_merged.csv",
  "results_v3/drlvm_v3_oos_benchmark.csv","results_v3/drlvm_v3_coefficients.csv","results_v3/rolling_leadership_determinants.csv",
  "results_v3/window_sensitivity.csv","results_v3/period_leadership_summary.csv","results_v3/rolling_price_discovery_with_covariates.csv"
