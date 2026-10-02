@@ -230,7 +230,9 @@ if len(R):
     vm=R.groupby(["common","preferred"]).agg(mae_c=("mispricing_c",lambda x:np.mean(np.abs(x))),mae_p=("mispricing_p",lambda x:np.mean(np.abs(x)))).reset_index()
     joint=res.merge(vm,on=["common","preferred"],how="left")
     joint["valuation_leader"]=np.where(joint.mae_c<joint.mae_p,"common","preferred")
-    joint["leadership_agrees"]=joint.leader_ils==joint.valuation_leader
+    if "leader_ils" not in joint.columns:
+        joint["leader_ils"]=np.nan
+    joint["leadership_agrees"]=np.where(joint["leader_ils"].notna(), joint["leader_ils"]==joint["valuation_leader"], np.nan)
     joint.to_csv(f"{OUT}/price_vs_valuation_leadership.csv",index=False)
 # basic figures
 coin=res.dropna(subset=["ils_c"]).copy()
