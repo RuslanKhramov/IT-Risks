@@ -101,6 +101,11 @@ for _,pr in pairs.iterrows():
     w["issuer"]=pr.issuer;w["common"]=c;w["preferred"]=p;w["date"]=w.index
     pan.append(w.reset_index(drop=True))
 P=pd.concat(pan,ignore_index=True).sort_values(["issuer","date"])
+# Dividend-event archive is currently reliable through its last observed event.
+# A trailing-365d yield remains interpretable for at most one year after that date.
+div_max=pd.to_datetime(div["date"]).max() if len(div) else pd.NaT
+valuation_data_end=(div_max+pd.Timedelta(days=365)) if pd.notna(div_max) else P.date.max()
+P=P[P.date<=valuation_data_end].copy()
 cut=P.date.quantile(.8)
 mw=market[["rv20","dispersion","absret"]].resample("W-FRI").last().dropna()
 mtr=mw[mw.index<=cut]; mu_m=mtr.mean(); sd_m=mtr.std().replace(0,1)
@@ -133,6 +138,41 @@ bench=pd.DataFrame([
 bench.to_csv(f"{OUT}/drlvm_v3_oos_benchmark.csv",index=False)
 pd.DataFrame({"term":fit.params.index,"coef":fit.params.values,"se_cluster":fit.bse.values,"p_cluster":fit.pvalues.values}).to_csv(f"{OUT}/drlvm_v3_coefficients.csv",index=False)
 te["mispricing"]=te.spread-te.drlvm_v3; te.to_csv(f"{OUT}/drlvm_v3_oos_predictions.csv",index=False)
+
+# ---------- RCCVM v3 on dividend-covered valuation sample ----------
+P2=P.copy()
+P2["fair"]=pred(P2,fit.params,features,mu)
+P2["gap_to_fair"]=P2["fair"]-P2["spread"]
+for f0 in ["div_yield_gap","value_gap","amihud_gap","vol_gap","zero_gap"]:
+    P2[f"d_{f0}"]=P2.groupby("issuer")[f0].diff()
+rcc_rows=[]; rcc_coef=[]; rcc_pred=[]
+for h in [1,4,13,26,52]:
+    q=P2.copy()
+    q["future_spread"]=q.groupby("issuer")["spread"].shift(-h)
+    q["delta_h"]=q.future_spread-q.spread
+    q=q.dropna(subset=["delta_h","gap_to_fair"]).copy()
+    for s0 in [1,2,3]:
+        q[f"gap_R{s0}"]=q.gap_to_fair*(q.regime==s0)
+    fs=["gap_to_fair"]+[f"gap_R{s0}" for s0 in [1,2,3]]+[f"d_{f0}" for f0 in ["div_yield_gap","value_gap","vol_gap"]]
+    train=q[q.date<=cut].dropna(subset=fs); test=q[q.date>cut].dropna(subset=fs)
+    if len(train)<100 or len(test)<20: continue
+    F=OLS(train.delta_h,add_constant(train[fs])).fit(cov_type="cluster",cov_kwds={"groups":train.issuer})
+    test=test.copy();test["pred_delta"]=F.predict(add_constant(test[fs],has_constant="add"));test["pred_spread"]=test.spread+test.pred_delta
+    rmse=mean_squared_error(test.future_spread,test.pred_spread)**.5; rmse_rw=mean_squared_error(test.future_spread,test.spread)**.5
+    mae=mean_absolute_error(test.future_spread,test.pred_spread); mae_rw=mean_absolute_error(test.future_spread,test.spread)
+    direction=(np.sign(test.pred_delta)==np.sign(test.delta_h)).mean()
+    pnl=np.sign(test.pred_delta)*test.delta_h
+    sharpe=(pnl.mean()/pnl.std()*np.sqrt(52/h)) if pnl.std()>0 else np.nan
+    rcc_rows.append({"h_weeks":h,"n":len(test),"RMSE_RCCVM":rmse,"RMSE_RandomWalk":rmse_rw,
+      "RMSE_improvement_pct":100*(1-rmse/rmse_rw),"MAE_RCCVM":mae,"MAE_RandomWalk":mae_rw,
+      "direction_accuracy":direction,"signal_spread_sharpe_gross":sharpe})
+    for term in F.params.index:
+        rcc_coef.append({"h_weeks":h,"term":term,"coef":F.params[term],"se_cluster":F.bse[term],"p_cluster":F.pvalues[term]})
+    keep=test[["date","issuer","common","preferred","spread","fair","gap_to_fair","regime","future_spread","delta_h","pred_delta","pred_spread"]].copy()
+    keep["h_weeks"]=h;rcc_pred.append(keep)
+pd.DataFrame(rcc_rows).to_csv(f"{OUT}/rccvm_v3_oos_benchmark.csv",index=False)
+pd.DataFrame(rcc_coef).to_csv(f"{OUT}/rccvm_v3_coefficients.csv",index=False)
+if rcc_pred: pd.concat(rcc_pred,ignore_index=True).to_csv(f"{OUT}/rccvm_v3_oos_predictions.csv",index=False)
 
 # ---------- Rolling ILS determinants ----------
 roll=pd.read_csv(f"{BASE}/rolling_price_discovery.csv")
@@ -228,7 +268,8 @@ coef=pd.DataFrame(regrows)
 summary={
  "official_moex_dividend_rows":int((div.source=="MOEX_ISS").sum()) if len(div) else 0,
  "merged_dividend_rows":int(len(div)),
- "dividend_last_date":str(div.date.max().date()) if len(div) else None,
+ "dividend_last_date":str(pd.to_datetime(div.date).max().date()) if len(div) else None,
+ "valuation_sample_end":str(pd.to_datetime(valuation_data_end).date()) if pd.notna(valuation_data_end) else None,
  "drlvm_v3_rmse":float(B.loc["DRLVM_v3","RMSE"]),
  "issuer_mean_rmse":float(B.loc["IssuerMean","RMSE"]),
  "drlvm_v3_rmse_improvement_pct":float(100*(1-B.loc["DRLVM_v3","RMSE"]/B.loc["IssuerMean","RMSE"])),
@@ -236,6 +277,11 @@ summary={
  "drlvm_v3_dividend_p":float(fit.pvalues.get("div_yield_gap",np.nan)),
  "rolling_covariate_windows":int(len(R))
 }
+if len(rcc_rows):
+    for rr in rcc_rows:
+        h=int(rr["h_weeks"])
+        summary[f"rccvm_v3_h{h}_rmse_improvement_pct"]=float(rr["RMSE_improvement_pct"])
+        summary[f"rccvm_v3_h{h}_direction_accuracy"]=float(rr["direction_accuracy"])
 for dep in ["ils_c","mis_c","is_c_mid"]:
     for term in ["log_value_gap_z","amihud_gap_z","zero_gap_z","vol_gap_z","div_yield_gap_z"]:
         q=coef[(coef.dependent==dep)&(coef.term==term)]
