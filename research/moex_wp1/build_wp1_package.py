@@ -50,7 +50,8 @@ mean_ils=float(v2["rolling_mean_common_ils"])
 drl_imp=float(v3["drlvm_v3_rmse_improvement_pct"])
 div_coef=float(v3["drlvm_v3_dividend_coef"])
 div_p=float(v3["drlvm_v3_dividend_p"])
-last_div=v3.get("dividend_last_date")\nvaluation_end=v3.get("valuation_sample_end")
+last_div=v3.get("dividend_last_date")
+valuation_end=v3.get("valuation_sample_end")
 
 def pct(x,d=1): return f"{100*x:.{d}f}%"
 def num(x,d=3):
