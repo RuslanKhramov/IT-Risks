@@ -6,6 +6,8 @@ on:
       - 'research/moex_wp1/**'
       - '.github/workflows/moex-wp1.yml'
   workflow_dispatch:
+permissions:
+  contents: write
 jobs:
   research:
     runs-on: ubuntu-latest
@@ -19,9 +21,26 @@ jobs:
         run: pip install pandas numpy scipy statsmodels scikit-learn matplotlib pyarrow requests
       - name: Run
         run: python research/moex_wp1/run_wp1.py
-      - name: Upload
+      - name: Publish compact audit snapshot
+        run: |
+          mkdir -p wp1_results_snapshot
+          cp results/SUMMARY.md wp1_results_snapshot/
+          cp results/summary_metrics.json wp1_results_snapshot/
+          cp results/pair_price_discovery.csv wp1_results_snapshot/
+          cp results/rolling_price_discovery.csv wp1_results_snapshot/
+          cp results/rolling_year_summary.csv wp1_results_snapshot/
+          cp results/sradv_oos_benchmark.csv wp1_results_snapshot/
+          cp results/sradv_coefficients.csv wp1_results_snapshot/
+          cp results/rsldv_oos_benchmark.csv wp1_results_snapshot/
+          cp results/price_vs_valuation_leadership.csv wp1_results_snapshot/ || true
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add wp1_results_snapshot
+          git commit -m "Snapshot WP1 empirical audit" || true
+          git push origin HEAD:research/moex-wp1-20261002
+      - name: Upload compact outputs
         uses: actions/upload-artifact@v4
         with:
-          name: moex-wp1-results
-          path: results/
+          name: moex-wp1-summary
+          path: wp1_results_snapshot/
           retention-days: 7
